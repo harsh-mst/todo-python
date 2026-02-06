@@ -12,7 +12,7 @@ app = FastAPI(title="Todo API")
 origins = [
     "http://localhost:3000",
     "http://localhost:5173",
-    "resplendent-arithmetic-8c8312.netlify.app"
+    "https://resplendent-arithmetic-8c8312.netlify.app"
 ]
 
 app.add_middleware(
