@@ -21,7 +21,7 @@ class CreateTask(BaseModel):
         title=" Enter the description of the task(optional)")]
     completed: bool = False
     user_id: PyObjectId
-    created_at: datetime = Field(default_factory=datetime.now())
+    created_at: datetime = Field(default_factory=datetime.now)
 
 
 class CreateTaskRequest(BaseModel):
@@ -43,7 +43,7 @@ class TaskResponse(BaseModel):
 class UpdateTask(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
-    completed: bool = None
+    completed: Optional[bool] = None 
 
 class UpdatePassword(BaseModel):
     currentPassword: str

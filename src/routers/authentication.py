@@ -92,3 +92,12 @@ async def delete_account(currentUser: UserModel = Depends(get_current_user)):
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized request")
 
     return {"message": "User deleted successfully"}
+
+
+@router.post("/logout")
+async def logout(current_user: UserModel = Depends(get_current_user)):
+    
+    return {
+        "message": "Successfully logged out",
+        "email": current_user.email
+    }

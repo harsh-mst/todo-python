@@ -15,27 +15,59 @@ async def createTask(
     request: CreateTaskRequest,
     currentUser: UserModel = Depends(get_current_user)
 ):
-    new_task = request.model_dump(by_alias=True, exclude=["id"])
-    new_task["user_id"] = ObjectId(currentUser.id)
-    new_task["completed"] = False
-    new_task["created_at"] = datetime.utcnow()
+    new_task = {
+        "title": request.title,
+        "description": request.description,
+        "user_id": ObjectId(currentUser.id),
+        "completed": False,
+        "created_at": datetime.utcnow()
+    }
 
+   
     result = await collections.tasks_collection.insert_one(new_task)
-    new_task["id"] = str(result.inserted_id)
-    return new_task
+
+    response_task = {
+        "id": str(result.inserted_id),
+        "title": new_task["title"],
+        "description": new_task["description"],
+        "completed": new_task["completed"],
+        "user_id": str(new_task["user_id"]),
+        "created_at": new_task["created_at"]
+    }
+
+  
+    return response_task
 
 
-@router.get("/tasks", response_model=list[TasksModel])
+@router.get("/tasks", response_model=list[TaskResponse])
 async def get_user_tasks(
     currentUser: UserModel = Depends(get_current_user)
 ):
-    all_tasks = collections.tasks_collection.find(
+    cursor = collections.tasks_collection.find(
         {"user_id": ObjectId(currentUser.id)}
     )
-    return await all_tasks.to_list(length=100)
+    tasks = await cursor.to_list(length=100)
+
+   
+
+    formatted_tasks = []
+    for task in tasks:
+        formatted_task = {
+            "id": str(task["_id"]),
+            "title": task.get("title", ""),
+            "description": task.get("description", ""),
+            "completed": task.get("completed", False),
+            "user_id": str(task.get("user_id", "")),
+            "created_at": task.get("created_at", datetime.utcnow())
+        }
+        formatted_tasks.append(formatted_task)
 
 
-@router.get("/task/{task_id}", response_model=TasksModel)
+
+    return formatted_tasks
+
+
+@router.get("/task/{task_id}", response_model=TaskResponse)
 async def get_task(
     task_id: str,
     currentUser: UserModel = Depends(get_current_user)
@@ -50,15 +82,28 @@ async def get_task(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found"
         )
-    return task
+
+   
+    formatted_task = {
+        "id": str(task["_id"]),
+        "title": task.get("title", ""),
+        "description": task.get("description", ""),
+        "completed": task.get("completed", False),
+        "user_id": str(task.get("user_id", "")),
+        "created_at": task.get("created_at", datetime.utcnow())
+    }
+
+    return formatted_task
 
 
-@router.post("/update-task/{task_id}", response_model=TasksModel)
+@router.post("/update-task/{task_id}", response_model=TaskResponse)
 async def update_task(
     task_id: str,
     request: UpdateTask,
     currentUser: UserModel = Depends(get_current_user)
 ):
+
+
     update_data = {
         k: v for k, v in request.model_dump().items() if v is not None
     }
@@ -84,7 +129,57 @@ async def update_task(
             detail="Task not found"
         )
 
-    return result
+    formatted_task = {
+        "id": str(result["_id"]),
+        "title": result.get("title", ""),
+        "description": result.get("description", ""),
+        "completed": result.get("completed", False),
+        "user_id": str(result.get("user_id", "")),
+        "created_at": result.get("created_at", datetime.utcnow())
+    }
+
+    return formatted_task
+
+
+@router.post("/task-completed/{task_id}", response_model=TaskResponse)
+async def toggle_task_completion(
+    task_id: str,
+    currentUser: UserModel = Depends(get_current_user)
+):
+    task = await collections.tasks_collection.find_one(
+        {
+            "_id": ObjectId(task_id),
+            "user_id": ObjectId(currentUser.id)
+        }
+    )
+
+    if not task:
+        raise HTTPException(
+            status_code=404,
+            detail="Task not found or unauthorized"
+        )
+
+    new_status = not task.get("completed", False)
+
+    result = await collections.tasks_collection.find_one_and_update(
+        {
+            "_id": ObjectId(task_id),
+            "user_id": ObjectId(currentUser.id)
+        },
+        {"$set": {"completed": new_status}},
+        return_document=ReturnDocument.AFTER
+    )
+
+    formatted_task = {
+        "id": str(result["_id"]),
+        "title": result.get("title", ""),
+        "description": result.get("description", ""),
+        "completed": result.get("completed", False),
+        "user_id": str(result.get("user_id", "")),
+        "created_at": result.get("created_at", datetime.utcnow())
+    }
+
+    return formatted_task
 
 
 @router.delete("/tasks/{task_id}")

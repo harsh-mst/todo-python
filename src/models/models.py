@@ -20,8 +20,10 @@ class UserModel(BaseModel):
 class TasksModel(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
     title: Annotated[str, Field(...,
+                                alias="taskName",
                                 title="Enter the title of the task", min_length=5)]
     description: Annotated[Optional[str], Field(
+        alias="taskDescription",
         title=" Enter the description of the task(optional)")]
     completed: bool = False
     user_id: PyObjectId
